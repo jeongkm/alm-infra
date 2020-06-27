@@ -1,0 +1,59 @@
+---
+# requirements install
+- name: Install Roles from Galaxy
+  hosts: all
+  connection: local
+  tasks:
+    - name: installing required ansible-galaxy roles
+      command: "ansible-galaxy install --ignore-errors -r requirements.yml"
+
+# Let's rock on ALM
+- name: Deploy Jenkins CI
+  hosts: jenkins_server
+  remote_user: "{{ ansible_user  }}"
+  become: yes
+
+  roles:
+    - geerlingguy.java
+    - geerlingguy.repo-epel
+    - geerlingguy.jenkins
+    - geerlingguy.git
+    - tecris.maven
+    - geerlingguy.ansible
+
+- name: Deploy Nexus Server
+  hosts: nexus_server
+  remote_user: "{{ ansible_user }}"
+  become: yes
+
+  roles:
+    - geerlingguy.java
+    - savoirfairelinux.nexus3-oss
+
+- name: Deploy Sonar Server
+  hosts: sonar_server
+  remote_user: "{{ ansible_user }}"
+  become: yes
+
+  vars:
+    java_packages:
+      - java-1.8.0-openjdk
+  pre_tasks:
+    - name: Install package dependencies.
+      package:
+        name: "{{ item }}"
+        state: "present"
+      with_items:
+        - unzip
+
+  roles:
+    - geerlingguy.java
+    - lrk.sonarqube
+
+- name: App Server
+  hosts: app_server
+  remote_user: "{{ ansible_user }}"
+  become: yes
+
+  roles:
+    - jenkins-keys-config
